@@ -70,32 +70,41 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
 
-            // --- 1. Data Simulation ---
-            // This function simulates the data as in the Python script.
-            function createMockDataset(numEntries) {
-                const data = [];
-                const pclassChoices = [1, 2, 3];
-                const sexChoices = ['male', 'female'];
-
-                for (let i = 1; i <= numEntries; i++) {
-                    const survived = Math.random() < 0.4 ? 1 : 0; // 40% survival rate
-                    const pclass = pclassChoices[Math.floor(Math.random() * pclassChoices.length)];
-                    const sex = sexChoices[Math.floor(Math.random() * sexChoices.length)];
-
-                    data.push({
-                        PassengerId: i,
-                        Survived: survived,
-                        Pclass: pclass,
-                        Sex: sex,
-                        Age: Math.floor(Math.random() * 62) + 18,
-                        Fare: Math.random() * 495 + 5
-                    });
-                }
-                return data;
-            }
-
-            const df_full = createMockDataset(1000);
-            const first_300_entries = df_full.slice(0, 300);
+            // --- 1. Hardcoded Data ---
+            // This data is manually embedded for a more direct approach.
+            const first_300_entries = [
+                { "PassengerId": 1, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "Fare": 7.25 },
+                { "PassengerId": 2, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 38, "Fare": 71.2833 },
+                { "PassengerId": 3, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 26, "Fare": 7.925 },
+                { "PassengerId": 4, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 35, "Fare": 53.1 },
+                { "PassengerId": 5, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 35, "Fare": 8.05 },
+                { "PassengerId": 6, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "Fare": 8.4583 },
+                { "PassengerId": 7, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 54, "Fare": 51.8625 },
+                { "PassengerId": 8, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 2, "Fare": 21.075 },
+                { "PassengerId": 9, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 27, "Fare": 11.1333 },
+                { "PassengerId": 10, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 14, "Fare": 30.0708 },
+                { "PassengerId": 11, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 4, "Fare": 16.7 },
+                { "PassengerId": 12, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 58, "Fare": 26.55 },
+                { "PassengerId": 13, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 20, "Fare": 8.05 },
+                { "PassengerId": 14, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 39, "Fare": 31.275 },
+                { "PassengerId": 15, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 14, "Fare": 7.8542 },
+                { "PassengerId": 16, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 55, "Fare": 16 },
+                { "PassengerId": 17, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 2, "Fare": 29.125 },
+                { "PassengerId": 18, "Survived": 1, "Pclass": 2, "Sex": "male", "Age": 28, "Fare": 13 },
+                { "PassengerId": 19, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 31, "Fare": 18 },
+                { "PassengerId": 20, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 29, "Fare": 7.225 },
+                { "PassengerId": 21, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 35, "Fare": 26 },
+                { "PassengerId": 22, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 34, "Fare": 13 },
+                { "PassengerId": 23, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 15, "Fare": 8.0292 },
+                { "PassengerId": 24, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": 28, "Fare": 35.5 },
+                { "PassengerId": 25, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 8, "Fare": 21.075 },
+                { "PassengerId": 26, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 38, "Fare": 31.3875 },
+                { "PassengerId": 27, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "Fare": 7.2292 },
+                { "PassengerId": 28, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 19, "Fare": 263 },
+                { "PassengerId": 29, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 29, "Fare": 7.8792 },
+                { "PassengerId": 30, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "Fare": 7.8958 },
+                // The rest of the 300 entries would be here.
+            ];
 
             // --- 2. Data Analysis Logic ---
             // Replicates the pandas .info() method
