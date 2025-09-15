@@ -3,561 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Survival Rate EDA</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js for data visualization -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Titanic Survival Classifier - TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@latest"></script>
+    <script src="app.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #1a73e8;
+        }
+        section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0d62c9;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        .metrics-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .metric-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            min-width: 200px;
+        }
+        .slider-container {
+            margin: 15px 0;
+        }
+        .slider {
+            width: 100%;
+        }
+        .data-preview {
+            overflow-x: auto;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .note {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        @media (max-width: 768px) {
+            .metrics-container {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
-<body class="p-6">
-    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
-        <h1 class="text-3xl font-bold text-gray-800 text-center mb-2">Survival Rate EDA on First 300 Entries</h1>
-        <p class="text-center text-gray-600 mb-6">Exploratory Data Analysis performed on a simulated dataset.</p>
+<body>
+    <div class="container">
+        <h1>Titanic Survival Classifier with TensorFlow.js</h1>
+        
+        <section id="data-load">
+            <h2>1. Data Load</h2>
+            <p>Upload the training and test CSV files from the Titanic dataset:</p>
+            <div>
+                <label for="train-file">Training Data (train.csv):</label>
+                <input type="file" id="train-file" accept=".csv">
+            </div>
+            <div>
+                <label for="test-file">Test Data (test.csv):</label>
+                <input type="file" id="test-file" accept=".csv">
+            </div>
+            <button id="load-data-btn" onclick="loadData()">Load Data</button>
+            <div id="data-status"></div>
+        </section>
 
-        <div id="results" class="space-y-8">
-            <!-- Data Overview Section -->
-            <div id="data-overview" class="bg-gray-50 rounded-lg p-6 shadow-inner">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">1. Data Overview & Summary Statistics</h2>
-                <div class="space-y-4">
-                    <pre id="info" class="bg-gray-100 p-4 rounded-lg text-sm text-gray-800 overflow-x-auto"></pre>
-                    <pre id="describe" class="bg-gray-100 p-4 rounded-lg text-sm text-gray-800 overflow-x-auto"></pre>
+        <section id="inspect">
+            <h2>2. Data Inspection</h2>
+            <button id="inspect-btn" onclick="inspectData()" disabled>Inspect Data</button>
+            <div id="data-preview" class="data-preview"></div>
+            <div id="data-stats"></div>
+            <div id="charts"></div>
+        </section>
+
+        <section id="preprocessing">
+            <h2>3. Preprocessing</h2>
+            <button id="preprocess-btn" onclick="preprocessData()" disabled>Preprocess Data</button>
+            <div>
+                <label>
+                    <input type="checkbox" id="add-family-features" checked>
+                    Add Family Features (FamilySize, IsAlone)
+                </label>
+            </div>
+            <div id="preprocessing-output"></div>
+        </section>
+
+        <section id="model">
+            <h2>4. Model Setup</h2>
+            <button id="create-model-btn" onclick="createModel()" disabled>Create Model</button>
+            <div id="model-summary"></div>
+        </section>
+
+        <section id="training">
+            <h2>5. Training</h2>
+            <button id="train-btn" onclick="trainModel()" disabled>Train Model</button>
+            <div id="training-status"></div>
+            <div id="training-vis"></div>
+        </section>
+
+        <section id="metrics">
+            <h2>6. Evaluation Metrics</h2>
+            <div class="slider-container">
+                <label for="threshold-slider">Classification Threshold (for ROC curve):</label>
+                <input type="range" id="threshold-slider" class="slider" min="0" max="1" step="0.01" value="0.5" disabled>
+                <span id="threshold-value">0.5</span>
+            </div>
+            <div id="metrics-output" class="metrics-container">
+                <div class="metric-card">
+                    <h3>Confusion Matrix</h3>
+                    <div id="confusion-matrix"></div>
+                </div>
+                <div class="metric-card">
+                    <h3>Performance Metrics</h3>
+                    <div id="performance-metrics"></div>
                 </div>
             </div>
+        </section>
 
-            <!-- Survival Rates Section -->
-            <div id="survival-rates" class="bg-gray-50 rounded-lg p-6 shadow-inner">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">Survival Rate Analysis</h2>
-                <div id="overall-rate" class="mb-4">
-                    <p class="font-medium text-gray-800">Overall Survival Rate:</p>
-                    <span id="overall-rate-value" class="text-lg font-bold text-indigo-600"></span>
-                </div>
-                <div class="mb-4">
-                    <p class="font-medium text-gray-800">Survival Rate by Sex:</p>
-                    <pre id="survival-sex" class="bg-gray-100 p-4 rounded-lg text-sm text-gray-800 overflow-x-auto"></pre>
-                </div>
-                <div>
-                    <p class="font-medium text-gray-800">Survival Rate by Passenger Class (Pclass):</p>
-                    <pre id="survival-pclass" class="bg-gray-100 p-4 rounded-lg text-sm text-gray-800 overflow-x-auto"></pre>
-                </div>
-            </div>
+        <section id="prediction">
+            <h2>7. Prediction</h2>
+            <button id="predict-btn" onclick="predict()" disabled>Predict on Test Data</button>
+            <div id="prediction-output"></div>
+        </section>
 
-            <!-- Charts Section -->
-            <div id="charts-section" class="space-y-8">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">Data Visualizations</h2>
-                <div class="bg-gray-50 rounded-lg p-6 shadow-inner">
-                    <h3 class="text-xl font-medium text-gray-700 text-center mb-4">Overall Survival Rate</h3>
-                    <canvas id="overallSurvivalChart" class="w-full h-80"></canvas>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-6 shadow-inner">
-                    <h3 class="text-xl font-medium text-gray-700 text-center mb-4">Survival Rate by Sex</h3>
-                    <canvas id="survivalBySexChart" class="w-full h-80"></canvas>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-6 shadow-inner">
-                    <h3 class="text-xl font-medium text-gray-700 text-center mb-4">Survival Rate by Passenger Class</h3>
-                    <canvas id="survivalByPclassChart" class="w-full h-80"></canvas>
-                </div>
+        <section id="export">
+            <h2>8. Export Results</h2>
+            <button id="export-btn" onclick="exportResults()" disabled>Export Results</button>
+            <div id="export-status"></div>
+        </section>
+
+        <section id="deployment">
+            <h2>Deployment Notes</h2>
+            <div class="note">
+                <p>To deploy this application:</p>
+                <ol>
+                    <li>Create a public GitHub repository</li>
+                    <li>Commit index.html and app.js to the repository</li>
+                    <li>Enable GitHub Pages in repository settings (select main branch and root folder)</li>
+                    <li>Your app will be available at: https://[your-username].github.io/[repository-name]</li>
+                </ol>
             </div>
-        </div>
+        </section>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-
-            // --- 1. Hardcoded Data ---
-            // This data is manually embedded for a more direct approach.
-            const first_300_entries = [
-                { "PassengerId": 1, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "SibSp": 1, "Parch": 0, "Fare": 7.25 },
-                { "PassengerId": 2, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 38, "SibSp": 1, "Parch": 0, "Fare": 71.2833 },
-                { "PassengerId": 3, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 26, "SibSp": 0, "Parch": 0, "Fare": 7.925 },
-                { "PassengerId": 4, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 35, "SibSp": 1, "Parch": 0, "Fare": 53.1 },
-                { "PassengerId": 5, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 35, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 6, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 8.4583 },
-                { "PassengerId": 7, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 54, "SibSp": 0, "Parch": 0, "Fare": 51.8625 },
-                { "PassengerId": 8, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 2, "SibSp": 3, "Parch": 1, "Fare": 21.075 },
-                { "PassengerId": 9, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 27, "SibSp": 0, "Parch": 2, "Fare": 11.1333 },
-                { "PassengerId": 10, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 14, "SibSp": 1, "Parch": 0, "Fare": 30.0708 },
-                { "PassengerId": 11, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 4, "SibSp": 1, "Parch": 1, "Fare": 16.7 },
-                { "PassengerId": 12, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 58, "SibSp": 0, "Parch": 0, "Fare": 26.55 },
-                { "PassengerId": 13, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 20, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 14, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 39, "SibSp": 1, "Parch": 5, "Fare": 31.275 },
-                { "PassengerId": 15, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 14, "SibSp": 0, "Parch": 0, "Fare": 7.8542 },
-                { "PassengerId": 16, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 55, "SibSp": 0, "Parch": 0, "Fare": 16.0 },
-                { "PassengerId": 17, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 2, "SibSp": 4, "Parch": 1, "Fare": 29.125 },
-                { "PassengerId": 18, "Survived": 1, "Pclass": 2, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 19, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 31, "SibSp": 1, "Parch": 0, "Fare": 18.0 },
-                { "PassengerId": 20, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.225 },
-                { "PassengerId": 21, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 35, "SibSp": 0, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 22, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 34, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 23, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 15, "SibSp": 0, "Parch": 0, "Fare": 8.0292 },
-                { "PassengerId": 24, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": 28, "SibSp": 0, "Parch": 0, "Fare": 35.5 },
-                { "PassengerId": 25, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 8, "SibSp": 3, "Parch": 1, "Fare": 21.075 },
-                { "PassengerId": 26, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 38, "SibSp": 1, "Parch": 5, "Fare": 31.3875 },
-                { "PassengerId": 27, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.2292 },
-                { "PassengerId": 28, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 19, "SibSp": 3, "Parch": 2, "Fare": 263.0 },
-                { "PassengerId": 29, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.8792 },
-                { "PassengerId": 30, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 31, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 40, "SibSp": 0, "Parch": 0, "Fare": 27.7208 },
-                { "PassengerId": 32, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": null, "SibSp": 1, "Parch": 0, "Fare": 146.5208 },
-                { "PassengerId": 33, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 34, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 66, "SibSp": 0, "Parch": 0, "Fare": 10.5 },
-                { "PassengerId": 35, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 28, "SibSp": 1, "Parch": 0, "Fare": 82.1708 },
-                { "PassengerId": 36, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 42, "SibSp": 1, "Parch": 0, "Fare": 52.0 },
-                { "PassengerId": 37, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.2292 },
-                { "PassengerId": 38, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 39, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 18, "SibSp": 2, "Parch": 0, "Fare": 18.0 },
-                { "PassengerId": 40, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 14, "SibSp": 1, "Parch": 0, "Fare": 11.2417 },
-                { "PassengerId": 41, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 40, "SibSp": 1, "Parch": 0, "Fare": 9.475 },
-                { "PassengerId": 42, "Survived": 0, "Pclass": 2, "Sex": "female", "Age": 27, "SibSp": 1, "Parch": 0, "Fare": 21.0 },
-                { "PassengerId": 43, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 44, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 3, "SibSp": 1, "Parch": 2, "Fare": 41.5792 },
-                { "PassengerId": 45, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 19, "SibSp": 0, "Parch": 0, "Fare": 7.8792 },
-                { "PassengerId": 46, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 47, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 48, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 49, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 2, "Parch": 0, "Fare": 21.6792 },
-                { "PassengerId": 50, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 29, "SibSp": 1, "Parch": 1, "Fare": 16.7 },
-                { "PassengerId": 51, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 7, "SibSp": 4, "Parch": 1, "Fare": 39.6875 },
-                { "PassengerId": 52, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 7.8 },
-                { "PassengerId": 53, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 49, "SibSp": 1, "Parch": 0, "Fare": 76.7292 },
-                { "PassengerId": 54, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 29, "SibSp": 1, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 55, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 65, "SibSp": 0, "Parch": 1, "Fare": 61.9792 },
-                { "PassengerId": 56, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 35.5 },
-                { "PassengerId": 57, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 10.5 },
-                { "PassengerId": 58, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 28.5, "SibSp": 0, "Parch": 0, "Fare": 7.2292 },
-                { "PassengerId": 59, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 5, "SibSp": 1, "Parch": 2, "Fare": 27.75 },
-                { "PassengerId": 60, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 11, "SibSp": 5, "Parch": 2, "Fare": 46.9 },
-                { "PassengerId": 61, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 7.2292 },
-                { "PassengerId": 62, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 38, "SibSp": 0, "Parch": 0, "Fare": 80.0 },
-                { "PassengerId": 63, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 45, "SibSp": 1, "Parch": 0, "Fare": 83.475 },
-                { "PassengerId": 64, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 4, "SibSp": 3, "Parch": 2, "Fare": 27.9 },
-                { "PassengerId": 65, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 27.7208 },
-                { "PassengerId": 66, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 15.2458 },
-                { "PassengerId": 67, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 29, "SibSp": 0, "Parch": 1, "Fare": 10.5 },
-                { "PassengerId": 68, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 19, "SibSp": 0, "Parch": 0, "Fare": 8.1583 },
-                { "PassengerId": 69, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 17, "SibSp": 4, "Parch": 2, "Fare": 7.925 },
-                { "PassengerId": 70, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 26, "SibSp": 4, "Parch": 1, "Fare": 31.275 },
-                { "PassengerId": 71, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 32, "SibSp": 0, "Parch": 0, "Fare": 10.5 },
-                { "PassengerId": 72, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 16, "SibSp": 2, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 73, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 73.5 },
-                { "PassengerId": 74, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 26, "SibSp": 1, "Parch": 0, "Fare": 14.4542 },
-                { "PassengerId": 75, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 32, "SibSp": 0, "Parch": 0, "Fare": 7.65 },
-                { "PassengerId": 76, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 34, "SibSp": 0, "Parch": 0, "Fare": 7.65 },
-                { "PassengerId": 77, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 78, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 79, "Survived": 1, "Pclass": 2, "Sex": "male", "Age": 0.83, "SibSp": 0, "Parch": 2, "Fare": 29.0 },
-                { "PassengerId": 80, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 12.475 },
-                { "PassengerId": 81, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 7.925 },
-                { "PassengerId": 82, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 9.5 },
-                { "PassengerId": 83, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.7875 },
-                { "PassengerId": 84, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 28, "SibSp": 0, "Parch": 0, "Fare": 47.1 },
-                { "PassengerId": 85, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 17, "SibSp": 0, "Parch": 0, "Fare": 10.5 },
-                { "PassengerId": 86, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 33, "SibSp": 3, "Parch": 0, "Fare": 15.85 },
-                { "PassengerId": 87, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 16, "SibSp": 1, "Parch": 3, "Fare": 34.375 },
-                { "PassengerId": 88, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 89, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 23, "SibSp": 3, "Parch": 2, "Fare": 263.0 },
-                { "PassengerId": 90, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 24, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 91, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 92, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 20, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 93, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 46, "SibSp": 1, "Parch": 0, "Fare": 61.175 },
-                { "PassengerId": 94, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 26, "SibSp": 1, "Parch": 2, "Fare": 20.575 },
-                { "PassengerId": 95, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 59, "SibSp": 0, "Parch": 0, "Fare": 7.25 },
-                { "PassengerId": 96, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 97, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 71, "SibSp": 0, "Parch": 0, "Fare": 34.6542 },
-                { "PassengerId": 98, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": 23, "SibSp": 0, "Parch": 1, "Fare": 63.3583 },
-                { "PassengerId": 99, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 34, "SibSp": 0, "Parch": 1, "Fare": 23.0 },
-                { "PassengerId": 100, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 34, "SibSp": 1, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 101, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 28, "SibSp": 0, "Parch": 0, "Fare": 7.925 },
-                { "PassengerId": 102, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 103, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 21, "SibSp": 0, "Parch": 1, "Fare": 77.2875 },
-                { "PassengerId": 104, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 33, "SibSp": 0, "Parch": 0, "Fare": 8.6542 },
-                { "PassengerId": 105, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 37, "SibSp": 2, "Parch": 0, "Fare": 7.925 },
-                { "PassengerId": 106, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 28, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 107, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 7.65 },
-                { "PassengerId": 108, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 109, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 38, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 110, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 1, "Parch": 0, "Fare": 15.5 },
-                { "PassengerId": 111, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 47, "SibSp": 0, "Parch": 0, "Fare": 40.125 },
-                { "PassengerId": 112, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 14.5, "SibSp": 1, "Parch": 0, "Fare": 14.4542 },
-                { "PassengerId": 113, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 114, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 20, "SibSp": 1, "Parch": 0, "Fare": 9.825 },
-                { "PassengerId": 115, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 17, "SibSp": 0, "Parch": 0, "Fare": 14.4583 },
-                { "PassengerId": 116, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 7.925 },
-                { "PassengerId": 117, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 70.5, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 118, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 21.0 },
-                { "PassengerId": 119, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 24, "SibSp": 0, "Parch": 1, "Fare": 247.5208 },
-                { "PassengerId": 120, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 2, "SibSp": 4, "Parch": 2, "Fare": 31.275 },
-                { "PassengerId": 121, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 21, "SibSp": 2, "Parch": 0, "Fare": 73.5 },
-                { "PassengerId": 122, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 123, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 32.5, "SibSp": 1, "Parch": 0, "Fare": 30.0708 },
-                { "PassengerId": 124, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 32.5, "SibSp": 1, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 125, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 55, "SibSp": 0, "Parch": 0, "Fare": 30.0 },
-                { "PassengerId": 126, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 12, "SibSp": 1, "Parch": 0, "Fare": 11.2417 },
-                { "PassengerId": 127, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 128, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 24, "SibSp": 0, "Parch": 0, "Fare": 7.25 },
-                { "PassengerId": 129, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 1, "Parch": 1, "Fare": 22.3583 },
-                { "PassengerId": 130, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 6.975 },
-                { "PassengerId": 131, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 33, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 132, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 20, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 133, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 47, "SibSp": 1, "Parch": 0, "Fare": 14.5 },
-                { "PassengerId": 134, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 29, "SibSp": 2, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 135, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 25, "SibSp": 0, "Parch": 0, "Fare": 15.5 },
-                { "PassengerId": 136, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 23, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 137, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 25, "SibSp": 1, "Parch": 2, "Fare": 26.2875 },
-                { "PassengerId": 138, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 37, "SibSp": 1, "Parch": 0, "Fare": 53.1 },
-                { "PassengerId": 139, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 7.25 },
-                { "PassengerId": 140, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 24, "SibSp": 0, "Parch": 0, "Fare": 79.2 },
-                { "PassengerId": 141, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 2, "Fare": 15.2458 },
-                { "PassengerId": 142, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 24, "SibSp": 1, "Parch": 0, "Fare": 15.85 },
-                { "PassengerId": 143, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 33, "SibSp": 1, "Parch": 0, "Fare": 9.4833 },
-                { "PassengerId": 144, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 19, "SibSp": 0, "Parch": 0, "Fare": 6.975 },
-                { "PassengerId": 145, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 19, "SibSp": 0, "Parch": 0, "Fare": 11.5 },
-                { "PassengerId": 146, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 35, "SibSp": 0, "Parch": 0, "Fare": 11.5 },
-                { "PassengerId": 147, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 19, "SibSp": 0, "Parch": 0, "Fare": 7.7958 },
-                { "PassengerId": 148, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 9, "SibSp": 2, "Parch": 2, "Fare": 34.375 },
-                { "PassengerId": 149, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 36.5, "SibSp": 0, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 150, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 42, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 151, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 51, "SibSp": 0, "Parch": 0, "Fare": 12.525 },
-                { "PassengerId": 152, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 22, "SibSp": 1, "Parch": 0, "Fare": 66.6 },
-                { "PassengerId": 153, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 55.5, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 154, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 40.5, "SibSp": 0, "Parch": 2, "Fare": 14.5 },
-                { "PassengerId": 155, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.3125 },
-                { "PassengerId": 156, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 51, "SibSp": 0, "Parch": 1, "Fare": 61.3792 },
-                { "PassengerId": 157, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 158, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 159, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 8.6625 },
-                { "PassengerId": 160, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 8, "Parch": 2, "Fare": 69.55 },
-                { "PassengerId": 161, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 20, "SibSp": 0, "Parch": 0, "Fare": 7.125 },
-                { "PassengerId": 162, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 40, "SibSp": 0, "Parch": 0, "Fare": 15.75 },
-                { "PassengerId": 163, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 26, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 164, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 17, "SibSp": 0, "Parch": 0, "Fare": 8.6625 },
-                { "PassengerId": 165, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 1, "SibSp": 4, "Parch": 1, "Fare": 39.6875 },
-                { "PassengerId": 166, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 0.83, "SibSp": 0, "Parch": 1, "Fare": 18.75 },
-                { "PassengerId": 167, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": null, "SibSp": 1, "Parch": 2, "Fare": 52.0 },
-                { "PassengerId": 168, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 45, "SibSp": 1, "Parch": 1, "Fare": 16.1 },
-                { "PassengerId": 169, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 25.925 },
-                { "PassengerId": 170, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 28, "SibSp": 0, "Parch": 0, "Fare": 56.4958 },
-                { "PassengerId": 171, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 61, "SibSp": 0, "Parch": 0, "Fare": 33.5 },
-                { "PassengerId": 172, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 4, "SibSp": 4, "Parch": 1, "Fare": 39.6875 },
-                { "PassengerId": 173, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 1, "SibSp": 1, "Parch": 1, "Fare": 11.1333 },
-                { "PassengerId": 174, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 7.925 },
-                { "PassengerId": 175, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 56, "SibSp": 0, "Parch": 0, "Fare": 30.6958 },
-                { "PassengerId": 176, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 177, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 178, "Survived": 0, "Pclass": 1, "Sex": "female", "Age": 50, "SibSp": 0, "Parch": 0, "Fare": 28.7125 },
-                { "PassengerId": 179, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 180, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 36, "SibSp": 0, "Parch": 0, "Fare": 0.0 },
-                { "PassengerId": 181, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 8, "Parch": 2, "Fare": 69.55 },
-                { "PassengerId": 182, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 15.05 },
-                { "PassengerId": 183, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 9, "SibSp": 4, "Parch": 2, "Fare": 31.3875 },
-                { "PassengerId": 184, "Survived": 1, "Pclass": 2, "Sex": "male", "Age": 1, "SibSp": 2, "Parch": 1, "Fare": 39.0 },
-                { "PassengerId": 185, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 4, "SibSp": 0, "Parch": 2, "Fare": 22.025 },
-                { "PassengerId": 186, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 50.0 },
-                { "PassengerId": 187, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 1, "Parch": 0, "Fare": 15.5 },
-                { "PassengerId": 188, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": 45, "SibSp": 0, "Parch": 0, "Fare": 26.55 },
-                { "PassengerId": 189, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "SibSp": 1, "Parch": 1, "Fare": 15.5 },
-                { "PassengerId": 190, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 36, "SibSp": 0, "Parch": 0, "Fare": 7.05 },
-                { "PassengerId": 191, "Survived": 0, "Pclass": 2, "Sex": "female", "Age": 32, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 192, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 19, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 193, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 19, "SibSp": 1, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 194, "Survived": 1, "Pclass": 2, "Sex": "male", "Age": 3, "SibSp": 1, "Parch": 1, "Fare": 26.0 },
-                { "PassengerId": 195, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 44, "SibSp": 0, "Parch": 0, "Fare": 27.7208 },
-                { "PassengerId": 196, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 58, "SibSp": 0, "Parch": 0, "Fare": 146.5208 },
-                { "PassengerId": 197, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 198, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 49, "SibSp": 0, "Parch": 0, "Fare": 0.0 },
-                { "PassengerId": 199, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 25, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 200, "Survived": 0, "Pclass": 2, "Sex": "female", "Age": 24, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 201, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 28, "SibSp": 0, "Parch": 0, "Fare": 9.5 },
-                { "PassengerId": 202, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 45, "SibSp": 0, "Parch": 0, "Fare": 0.0 },
-                { "PassengerId": 203, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 34, "SibSp": 0, "Parch": 0, "Fare": 7.225 },
-                { "PassengerId": 204, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 205, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 18, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 206, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 2, "SibSp": 0, "Parch": 1, "Fare": 10.4625 },
-                { "PassengerId": 207, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 32, "SibSp": 1, "Parch": 0, "Fare": 15.85 },
-                { "PassengerId": 208, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 26, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 209, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 16, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 210, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": 33, "SibSp": 0, "Parch": 0, "Fare": 35.5 },
-                { "PassengerId": 211, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 26, "SibSp": 0, "Parch": 0, "Fare": 7.05 },
-                { "PassengerId": 212, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 35, "SibSp": 0, "Parch": 0, "Fare": 21.0 },
-                { "PassengerId": 213, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 7.05 },
-                { "PassengerId": 214, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 215, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 1, "Parch": 0, "Fare": 7.25 },
-                { "PassengerId": 216, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 31, "SibSp": 1, "Parch": 0, "Fare": 113.275 },
-                { "PassengerId": 217, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 27, "SibSp": 0, "Parch": 0, "Fare": 7.925 },
-                { "PassengerId": 218, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 42, "SibSp": 1, "Parch": 0, "Fare": 27.0 },
-                { "PassengerId": 219, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 32, "SibSp": 0, "Parch": 0, "Fare": 76.2917 },
-                { "PassengerId": 220, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 10.5 },
-                { "PassengerId": 221, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 16, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 222, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 27, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 223, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 51, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 224, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 225, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": 38, "SibSp": 1, "Parch": 0, "Fare": 90.0 },
-                { "PassengerId": 226, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 9.35 },
-                { "PassengerId": 227, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 228, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 20.5, "SibSp": 0, "Parch": 0, "Fare": 7.25 },
-                { "PassengerId": 229, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 18, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 230, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 3, "Parch": 1, "Fare": 35.8542 },
-                { "PassengerId": 231, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 35, "SibSp": 0, "Parch": 0, "Fare": 83.1583 },
-                { "PassengerId": 232, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 233, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 59, "SibSp": 0, "Parch": 0, "Fare": 13.5 },
-                { "PassengerId": 234, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 5, "SibSp": 4, "Parch": 2, "Fare": 31.3875 },
-                { "PassengerId": 235, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 10.5 },
-                { "PassengerId": 236, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.2292 },
-                { "PassengerId": 237, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 25, "SibSp": 1, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 238, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 24, "SibSp": 0, "Parch": 2, "Fare": 26.25 },
-                { "PassengerId": 239, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 19, "SibSp": 0, "Parch": 0, "Fare": 10.5 },
-                { "PassengerId": 240, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 33, "SibSp": 0, "Parch": 0, "Fare": 12.275 },
-                { "PassengerId": 241, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 1, "Parch": 0, "Fare": 14.5 },
-                { "PassengerId": 242, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 243, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 10.5 },
-                { "PassengerId": 244, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 245, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 7.225 },
-                { "PassengerId": 246, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 44, "SibSp": 0, "Parch": 0, "Fare": 90.0 },
-                { "PassengerId": 247, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 248, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 24, "SibSp": 0, "Parch": 2, "Fare": 14.5 },
-                { "PassengerId": 249, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": 37, "SibSp": 1, "Parch": 1, "Fare": 52.5542 },
-                { "PassengerId": 250, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 21, "SibSp": 1, "Parch": 0, "Fare": 27.75 },
-                { "PassengerId": 251, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 21, "SibSp": 0, "Parch": 0, "Fare": 15.0 },
-                { "PassengerId": 252, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 29, "SibSp": 1, "Parch": 1, "Fare": 10.4625 },
-                { "PassengerId": 253, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 62, "SibSp": 0, "Parch": 0, "Fare": 26.55 },
-                { "PassengerId": 254, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 30, "SibSp": 1, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 255, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 41, "SibSp": 0, "Parch": 2, "Fare": 20.2125 },
-                { "PassengerId": 256, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 29, "SibSp": 0, "Parch": 2, "Fare": 15.2458 },
-                { "PassengerId": 257, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 79.2 },
-                { "PassengerId": 258, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 30, "SibSp": 1, "Parch": 1, "Fare": 247.5208 },
-                { "PassengerId": 259, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 35, "SibSp": 0, "Parch": 1, "Fare": 512.3292 },
-                { "PassengerId": 260, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 50, "SibSp": 0, "Parch": 1, "Fare": 26.0 },
-                { "PassengerId": 261, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 40, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 262, "Survived": 1, "Pclass": 2, "Sex": "male", "Age": 3, "SibSp": 4, "Parch": 2, "Fare": 41.5792 },
-                { "PassengerId": 263, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 52, "SibSp": 1, "Parch": 1, "Fare": 79.6667 },
-                { "PassengerId": 264, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 40, "SibSp": 0, "Parch": 0, "Fare": 0.0 },
-                { "PassengerId": 265, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 266, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 32, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 267, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 16, "SibSp": 4, "Parch": 1, "Fare": 39.6875 },
-                { "PassengerId": 268, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 25, "SibSp": 0, "Parch": 0, "Fare": 7.225 },
-                { "PassengerId": 269, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 58, "SibSp": 0, "Parch": 1, "Fare": 153.4625 },
-                { "PassengerId": 270, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 35, "SibSp": 0, "Parch": 0, "Fare": 135.6333 },
-                { "PassengerId": 271, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 31.0 },
-                { "PassengerId": 272, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 25, "SibSp": 0, "Parch": 0, "Fare": 7.225 },
-                { "PassengerId": 273, "Survived": 1, "Pclass": 2, "Sex": "female", "Age": 41, "SibSp": 1, "Parch": 0, "Fare": 19.5 },
-                { "PassengerId": 274, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": 37, "SibSp": 1, "Parch": 0, "Fare": 29.7 },
-                { "PassengerId": 275, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 276, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 40, "SibSp": 0, "Parch": 5, "Fare": 277.5542 },
-                { "PassengerId": 277, "Survived": 0, "Pclass": 3, "Sex": "female", "Age": 45, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 278, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 0.0 },
-                { "PassengerId": 279, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 7, "SibSp": 4, "Parch": 1, "Fare": 29.125 },
-                { "PassengerId": 280, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 35, "SibSp": 1, "Parch": 1, "Fare": 20.25 },
-                { "PassengerId": 281, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 45, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-                { "PassengerId": 282, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 29, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 283, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 16, "SibSp": 0, "Parch": 0, "Fare": 9.5 },
-                { "PassengerId": 284, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 19, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 285, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 286, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 9.5 },
-                { "PassengerId": 287, "Survived": 1, "Pclass": 3, "Sex": "male", "Age": 30, "SibSp": 0, "Parch": 0, "Fare": 7.2292 },
-                { "PassengerId": 288, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 289, "Survived": 1, "Pclass": 2, "Sex": "male", "Age": 42, "SibSp": 0, "Parch": 0, "Fare": 13.0 },
-                { "PassengerId": 290, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": 1, "SibSp": 1, "Parch": 0, "Fare": 13.8583 },
-                { "PassengerId": 291, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 19, "SibSp": 1, "Parch": 0, "Fare": 91.0792 },
-                { "PassengerId": 292, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 22, "SibSp": 0, "Parch": 0, "Fare": 30.0 },
-                { "PassengerId": 293, "Survived": 0, "Pclass": 2, "Sex": "male", "Age": 27, "SibSp": 0, "Parch": 0, "Fare": 26.0 },
-                { "PassengerId": 294, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 24, "SibSp": 0, "Parch": 0, "Fare": 7.8958 },
-                { "PassengerId": 295, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 24, "SibSp": 0, "Parch": 0, "Fare": 7.775 },
-                { "PassengerId": 296, "Survived": 0, "Pclass": 1, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 27.7208 },
-                { "PassengerId": 297, "Survived": 0, "Pclass": 3, "Sex": "male", "Age": 23, "SibSp": 0, "Parch": 0, "Fare": 8.05 },
-                { "PassengerId": 298, "Survived": 0, "Pclass": 1, "Sex": "female", "Age": 2, "SibSp": 1, "Parch": 2, "Fare": 151.55 },
-                { "PassengerId": 299, "Survived": 1, "Pclass": 1, "Sex": "male", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 30.5 },
-                { "PassengerId": 300, "Survived": 1, "Pclass": 1, "Sex": "female", "Age": 28, "SibSp": 0, "Parch": 1, "Fare": 97.8292 },
-                { "PassengerId": 301, "Survived": 1, "Pclass": 3, "Sex": "female", "Age": null, "SibSp": 0, "Parch": 0, "Fare": 7.75 },
-            ];
-
-            // --- 2. Data Analysis Logic ---
-            // Replicates the pandas .info() method
-            function getInfo(data) {
-                const totalEntries = data.length;
-                const columns = Object.keys(data[0]);
-                let infoString = `<class 'list'>\nRangeIndex: ${totalEntries} entries, 0 to ${totalEntries - 1}\nData columns (total ${columns.length} columns):\n`;
-                
-                columns.forEach((col, index) => {
-                    const nonNullCount = data.filter(d => d[col] !== null && d[col] !== undefined).length;
-                    infoString += ` ${index}   ${col}    ${nonNullCount} non-null\n`;
-                });
-
-                return infoString;
-            }
-            
-            // Replicates the pandas .describe() method for numerical columns
-            function getDescribe(data) {
-                const numericCols = ['PassengerId', 'Age', 'Fare'];
-                let describeString = `       ${numericCols.join('        ')}\n`;
-                
-                const stats = {};
-                numericCols.forEach(col => {
-                    const values = data.filter(d => typeof d[col] === 'number').map(d => d[col]);
-                    if (values.length > 0) {
-                        stats[col] = {
-                            count: values.length,
-                            mean: values.reduce((sum, val) => sum + val, 0) / values.length,
-                            std: Math.sqrt(values.map(v => Math.pow(v - (values.reduce((s, v) => s + v, 0) / values.length), 2)).reduce((s, v) => s + v, 0) / (values.length - 1)),
-                            min: Math.min(...values),
-                            '25%': values.sort((a,b) => a-b)[Math.floor(values.length * 0.25)],
-                            '50%': values.sort((a,b) => a-b)[Math.floor(values.length * 0.5)],
-                            '75%': values.sort((a,b) => a-b)[Math.floor(values.length * 0.75)],
-                            max: Math.max(...values)
-                        };
-                    }
-                });
-                
-                const statNames = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max'];
-                statNames.forEach(stat => {
-                    let rowString = stat.padEnd(8);
-                    numericCols.forEach(col => {
-                        const value = stats[col] ? stats[col][stat] : 'NaN';
-                        rowString += (typeof value === 'number' ? value.toFixed(2) + '' : value).padStart(12);
-                    });
-                    describeString += rowString + '\n';
-                });
-                return describeString;
-            }
-
-            // Function to calculate and display survival rates
-            function performEDA(data) {
-                // Overall Survival Rate
-                const survivedCount = data.filter(d => d.Survived === 1).length;
-                const overallSurvivalRate = survivedCount / data.length;
-                document.getElementById('overall-rate-value').textContent = `${(overallSurvivalRate * 100).toFixed(2)}%`;
-
-                // Survival Rate by Sex
-                const survivalBySex = data.reduce((acc, curr) => {
-                    if (!acc[curr.Sex]) {
-                        acc[curr.Sex] = { count: 0, survived: 0 };
-                    }
-                    acc[curr.Sex].count++;
-                    if (curr.Survived === 1) {
-                        acc[curr.Sex].survived++;
-                    }
-                    return acc;
-                }, {});
-
-                let survivalSexString = 'Sex     Survived\n';
-                for (const sex in survivalBySex) {
-                    const rate = survivalBySex[sex].survived / survivalBySex[sex].count;
-                    survivalSexString += `${sex.padEnd(8)}${rate.toFixed(4)}\n`;
-                }
-                document.getElementById('survival-sex').textContent = survivalSexString;
-                
-                // Survival Rate by Pclass
-                const survivalByPclass = data.reduce((acc, curr) => {
-                    if (!acc[curr.Pclass]) {
-                        acc[curr.Pclass] = { count: 0, survived: 0 };
-                    }
-                    acc[curr.Pclass].count++;
-                    if (curr.Survived === 1) {
-                        acc[curr.Pclass].survived++;
-                    }
-                    return acc;
-                }, {});
-
-                let survivalPclassString = 'Pclass  Survived\n';
-                const sortedPclasses = Object.keys(survivalByPclass).sort();
-                sortedPclasses.forEach(pclass => {
-                    const rate = survivalByPclass[pclass].survived / survivalByPclass[pclass].count;
-                    survivalPclassString += `${pclass.padEnd(8)}${rate.toFixed(4)}\n`;
-                });
-                document.getElementById('survival-pclass').textContent = survivalPclassString;
-
-                // --- 3. Visualization ---
-                // Overall Survival Chart
-                new Chart(document.getElementById('overallSurvivalChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['Died', 'Survived'],
-                        datasets: [{
-                            label: 'Proportion',
-                            data: [1 - overallSurvivalRate, overallSurvivalRate],
-                            backgroundColor: ['#6366f1', '#10b981'],
-                            borderColor: ['#4f46e5', '#059669'],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: { beginAtZero: true, max: 1 }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            title: { display: true, text: 'Overall Survival Rate' }
-                        }
-                    }
-                });
-
-                // Survival by Sex Chart
-                const sexLabels = Object.keys(survivalBySex);
-                const sexRates = sexLabels.map(sex => survivalBySex[sex].survived / survivalBySex[sex].count);
-                new Chart(document.getElementById('survivalBySexChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: sexLabels,
-                        datasets: [{
-                            label: 'Survival Rate',
-                            data: sexRates,
-                            backgroundColor: ['#3b82f6', '#ec4899'],
-                            borderColor: ['#2563eb', '#db2777'],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: { beginAtZero: true }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            title: { display: true, text: 'Survival Rate by Sex' }
-                        }
-                    }
-                });
-
-                // Survival by Pclass Chart
-                const pclassLabels = sortedPclasses.map(p => `Class ${p}`);
-                const pclassRates = sortedPclasses.map(pclass => survivalByPclass[pclass].survived / survivalByPclass[pclass].count);
-                new Chart(document.getElementById('survivalByPclassChart'), {
-                    type: 'bar',
-                    data: {
-                        labels: pclassLabels,
-                        datasets: [{
-                            label: 'Survival Rate',
-                            data: pclassRates,
-                            backgroundColor: ['#f59e0b', '#ef4444', '#14b8a6'],
-                            borderColor: ['#d97706', '#dc2626', '#0d9488'],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: { beginAtZero: true }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            title: { display: true, text: 'Survival Rate by Passenger Class' }
-                        }
-                    }
-                });
-            }
-
-            // Display the results
-            document.getElementById('info').textContent = getInfo(first_300_entries);
-            document.getElementById('describe').textContent = getDescribe(first_300_entries);
-            performEDA(first_300_entries);
-
-        });
-    </script>
 </body>
 </html>
